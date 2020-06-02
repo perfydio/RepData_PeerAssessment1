@@ -1,25 +1,84 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "PA1_template"
+author: "Perfydio"
+date: "01/06/2020"
+output: html_document
 ---
+1. Loading the data and changing the date format
+```{R Task 1, echo = TRUE}
+ActMonData <- read.csv("activity.csv")
+summary(ActMonData)
+
+library(lubridate)
+ActMonData$date <- ymd(ActMonData$date)
+```
 
 
-## Loading and preprocessing the data
+2. A histogram of the total steps taken each day
+```{R Task 2, echo = TRUE, warning = FALSE}
+TotStepsPerDay <- data.frame(tapply(ActMonData$steps,ActMonData$date,sum,na.rm=T))
 
+names(TotStepsPerDay[1])
+library(tidyverse)
+TotStepsPerDay <- TotStepsPerDay %>%
+        rename(total_steps = names(TotStepsPerDay[1]))
+        names(TotStepsPerDay)
 
+library(ggplot2)
+qplot(TotStepsPerDay$total_steps,xlab = "Total Steps", ylab = "freq", main = "Histogram")
 
-## What is mean total number of steps taken per day?
+dev.off()
+```
 
+3. The mean and median number of steps taken each day
+```{R Task 3, echo = TRUE, warning = FALSE}
+mean(TotStepsPerDay$total_steps);median(TotStepsPerDay$total_steps)
+```
 
+4. Time series plot of the average number of steps taken
+```{R Task 4, echo = TRUE, warning = FALSE}
 
-## What is the average daily activity pattern?
+AverageSteps <- aggregate(ActMonData$steps,by = list(ActMonData$interval), FUN = mean,na.rm= TRUE)
+names(AverageSteps) <- c("interval","mean")
+plot(AverageSteps$interval,AverageSteps$mean,type = "l",
+     xlab = "Interval", ylab = "Average steps", main = "Average number of steps per interval")
+```
 
+5. The 5-minute interval that, on average, contains the maximum numbers of steps
+```{R Task 5, echo = TRUE, warning = FALSE}
+AverageSteps[which.max(AverageSteps$mean), ]
+```
 
+6. Code to describe and show a strategy for imputing missing data
+```{R Task 6, echo = TRUE, warning = FALSE}
+imputed_steps <- AverageSteps$mean[match(ActMonData$interval, AverageSteps$interval)]
 
-## Imputing missing values
+ActMonData_imputed <- transform(ActMonData,steps = ifelse(is.na(ActMonData$steps),yes = imputed_steps, no = ActMonData$steps))
+steps_imputed_def <- aggregate(steps ~ date,ActMonData_imputed, sum)
+names(steps_imputed_def) <- c("date", "steps")
+```
 
+7. Histogram of the total number of steps taken each day after missing values are imputed
+```{R Task 7, echo = TRUE, warning = FALSE}
+qplot(steps_imputed_def$steps,xlab = "Total Steps", ylab = "freq", main = "Histogram")
 
+dev.off()
+```
 
-## Are there differences in activity patterns between weekdays and weekends?
+8. Panel plot compairing the average number of steps taken per 5-minute interval across weekdays and weekends
+```{R Task 8, echo = TRUE, warning = FALSE}
+ActMonData$day<-wday(ActMonData$date)
+par(mfrow=c(2,1))
+ActMonDataWEnd<-filter(ActMonData,ActMonData$day>5)
+AverageStepsWEnd <- aggregate(ActMonDataWEnd$steps,by = list(ActMonDataWEnd$interval), FUN = mean,na.rm= TRUE)
+names(AverageStepsWEnd) <- c("interval","mean")
+plot(AverageStepsWEnd$interval,AverageStepsWEnd$mean,type = "l",
+     xlab = "Interval", ylab = "Average steps", main = "Average number of steps during weekend")
+
+ActMonDataWDay<-filter(ActMonData,ActMonData$day<6)
+AverageStepsWDay <- aggregate(ActMonDataWDay$steps,by = list(ActMonDataWDay$interval), FUN = mean,na.rm= TRUE)
+names(AverageStepsWDay) <- c("interval","mean")
+plot(AverageStepsWDay$interval,AverageStepsWDay$mean,type = "l",
+     xlab = "Interval", ylab = "Average steps", main = "Average number of steps during weekday")
+
+```
